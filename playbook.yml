@@ -1,0 +1,59 @@
+---
+- name: Configure web servers and deploy site
+  hosts: web
+  become: true
+  gather_facts: true
+
+  vars:
+    web_root: /var/www/html
+    index_file: "{{ web_root }}/index.html"
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Apache
+      ansible.builtin.apt:
+        name: apache2
+        state: present
+
+    - name: Ensure Apache is enabled and running
+      ansible.builtin.service:
+        name: apache2
+        state: started
+        enabled: yes
+
+    - name: Deploy index.html
+      ansible.builtin.copy:
+        dest: "{{ index_file }}"
+        mode: "0644"
+        content: |
+          <!doctype html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Ansible + Jenkins</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 3rem; }
+              .box { padding: 1rem 1.5rem; background:#f5f5f5; border-radius:8px; border:1px solid #ddd; }
+            </style>
+          </head>
+          <body>
+            <h1>Apache is running ✅</h1>
+            <div class="box">
+              <p><strong>Hostname:</strong> {{ ansible_facts.hostname }}</p>
+              <p><strong>IP:</strong> {{ ansible_default_ipv4.address | default('N/A') }}</p>
+            </div>
+            <p>Deployed by Ansible via Jenkins Pipeline.</p>
+          </body>
+          </html>
+      notify: Restart Apache
+
+  handlers:
+    - name: Restart Apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
+``
